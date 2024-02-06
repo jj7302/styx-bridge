@@ -1,20 +1,11 @@
-[package]
-name = "styx-soroban"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+  "contracts/*",
+]
 
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
+[workspace.dependencies]
 soroban-sdk = "20.0.0"
-
-[dev_dependencies]
-soroban-sdk = { version = "20.0.0", features = ["testutils"] }
-
-[features]
-testutils = ["soroban-sdk/testutils"]
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
 opt-level = "z"

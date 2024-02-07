@@ -21,7 +21,13 @@ pub struct ClaimableBalanceContract;
 
 #[contractimpl]
 impl ClaimableBalanceContract {
-    pub fn deposit(env: Env, from: Address, token: Address, amount: i128, destination: BytesN<32>) {
+    pub fn deposit(
+        env: Env,
+        from: Address,
+        token: Address,
+        amount: i128,
+        destination: BytesN<32>,
+    ) -> u32 {
         from.require_auth();
         //TOOD: Make check that token type is XLM.
         token::Client::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
@@ -31,6 +37,7 @@ impl ClaimableBalanceContract {
         nonce += 1;
 
         env.storage().instance().set(&NONCE, &nonce);
+        let nonce2 = nonce.clone();
 
         env.events().publish(
             (symbol_short!("Deposit"),),
@@ -42,7 +49,7 @@ impl ClaimableBalanceContract {
                 last_event_nonce: nonce,
             },
         );
-
         env.storage().instance().extend_ttl(100, 100); //TODO: Figure out TTL stuff
+        nonce2
     }
 }

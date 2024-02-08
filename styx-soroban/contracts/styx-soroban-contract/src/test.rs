@@ -45,7 +45,7 @@ impl<'a> ClaimableBalanceTest<'a> {
 
         let destination = BytesN::from_array(&env, &[0u8; 32]);
 
-        let contract = create_incrementor_contract(&env);
+        let contract = create_claimable_balance_contract(&env);
 
         ClaimableBalanceTest {
             env,

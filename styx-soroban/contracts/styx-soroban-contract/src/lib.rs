@@ -37,7 +37,6 @@ impl ClaimableBalanceContract {
         nonce += 1;
 
         env.storage().instance().set(&NONCE, &nonce);
-        let nonce2 = nonce.clone();
 
         env.events().publish(
             (symbol_short!("Deposit"),),
@@ -50,6 +49,13 @@ impl ClaimableBalanceContract {
             },
         );
         env.storage().instance().extend_ttl(100, 100); //TODO: Figure out TTL stuff
-        nonce2
+        nonce
+    }
+    pub fn get_current_value(env: Env) -> u32 {
+        let count: u32 = env.storage().instance().get(&NONCE).unwrap_or(0);
+        count
     }
 }
+
+#[cfg(test)]
+mod test;

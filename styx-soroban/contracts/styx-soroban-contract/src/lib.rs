@@ -7,6 +7,7 @@ use soroban_sdk::{
 const NONCE: Symbol = symbol_short!("NONCE");
 
 #[derive(Clone)]
+#[derive(Debug)]
 #[contracttype]
 pub struct ClaimableBalance {
     pub token: Address,
@@ -29,7 +30,8 @@ impl ClaimableBalanceContract {
         destination: BytesN<32>,
     ) -> u32 {
         from.require_auth();
-        //TOOD: Make check that token type is XLM.
+
+        //TODO: see what happens if insufficient funds
         token::Client::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
 
         let mut nonce: u32 = env.storage().instance().get(&NONCE).unwrap_or(0);
@@ -38,15 +40,17 @@ impl ClaimableBalanceContract {
 
         env.storage().instance().set(&NONCE, &nonce);
 
+        let event_data = ClaimableBalance {
+            token,
+            amount,
+            sender: from,
+            destination,
+            last_event_nonce: nonce,
+        };
+
         env.events().publish(
             (symbol_short!("Deposit"),),
-            ClaimableBalance {
-                token: token,
-                amount: amount,
-                sender: from,
-                destination: destination,
-                last_event_nonce: nonce,
-            },
+            event_data
         );
         env.storage().instance().extend_ttl(100, 100); //TODO: Figure out TTL stuff
         nonce

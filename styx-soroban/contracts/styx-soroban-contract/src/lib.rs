@@ -44,6 +44,7 @@ pub struct ValsetEventData {
     pub powers: Vec<u32>,
 }
 
+#[derive(Clone)]
 #[contracttype]
 pub struct ValsetArgs {
     pub validators: Vec<Address>,
@@ -60,11 +61,11 @@ pub struct Signature {
     pub s: BytesN<32>,
 }
 
-fn make_checkpoint(e: Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN<32> {
+fn make_checkpoint(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN<32> {
     let mut payload = Bytes::new(&e);
-    payload.append(&valset.to_xdr(&e)); //TODO: see if this works
-    payload.append(&styx_Id);
-    payload.append("valsetargs");
+    payload.append(&valset.clone().to_xdr(&e)); //TODO: see if this works
+    payload.append(&styx_id.clone().to_xdr(&e));
+    payload.append(&"valsetargs".to_xdr(&e));
     let checkpoint = e.crypto().keccak256(&payload);
     return checkpoint;
 }
@@ -158,11 +159,11 @@ impl ClaimableBalanceContract {
         }
 
         let valset = ValsetArgs {
-            validators: validators,
-            powers: powers,
+            validators: validators.clone(),
+            powers: powers.clone(),
             valset_nonce: 0,
             reward_amount: 0,
-            reward_token: token,
+            reward_token: token.clone(),
         };
 
         let new_checkpoint = make_checkpoint(&env, &valset, &styx_id);
@@ -184,7 +185,6 @@ impl ClaimableBalanceContract {
 
         env.events()
             .publish((symbol_short!("ValsetUp"),), event_data);
-        env.storage().instance().extend_ttl(100, 100); //TODO: Figure out TTL stuff
     }
 }
 

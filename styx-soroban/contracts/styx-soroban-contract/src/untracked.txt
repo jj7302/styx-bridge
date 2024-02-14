@@ -1,5 +1,5 @@
 soroban contract invoke \
-    --id CD7PKC6QLPFKDPC3HJ36ZUIMA3XU72IKSSBFLTV2LZ4RN2BQBSWCP7A3 \
+    --id CCK2TSEYXGWHF6NZ5R56EHJORFUJXTMSIMA5OFZWS5VF7QYR6KB6T423 \
     --source alice \
     --network testnet \
     -- \
@@ -11,7 +11,7 @@ soroban contract invoke \
 
 #Illegal Calling
 soroban contract invoke \
-    --id CD7PKC6QLPFKDPC3HJ36ZUIMA3XU72IKSSBFLTV2LZ4RN2BQBSWCP7A3 \
+    --id CCK2TSEYXGWHF6NZ5R56EHJORFUJXTMSIMA5OFZWS5VF7QYR6KB6T423 \
     --source alice \
     --network testnet \
     -- \
@@ -23,7 +23,7 @@ soroban contract invoke \
 
 #Wrong token id
 soroban contract invoke \
-    --id CD7PKC6QLPFKDPC3HJ36ZUIMA3XU72IKSSBFLTV2LZ4RN2BQBSWCP7A3 \
+    --id CCK2TSEYXGWHF6NZ5R56EHJORFUJXTMSIMA5OFZWS5VF7QYR6KB6T423 \
     --source alice \
     --network testnet \
     -- \

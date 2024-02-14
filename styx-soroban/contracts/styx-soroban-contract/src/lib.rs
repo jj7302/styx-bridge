@@ -31,7 +31,6 @@ impl ClaimableBalanceContract {
     ) -> u32 {
         from.require_auth();
 
-        //TODO: see what happens if insufficient funds
         token::Client::new(&env, &token).transfer(&from, &env.current_contract_address(), &amount);
 
         let mut nonce: u32 = env.storage().instance().get(&NONCE).unwrap_or(0);
@@ -52,12 +51,11 @@ impl ClaimableBalanceContract {
             (symbol_short!("Deposit"),),
             event_data
         );
-        env.storage().instance().extend_ttl(100, 100); //TODO: Figure out TTL stuff
         nonce
     }
-    pub fn get_current_value(env: Env) -> u32 {
-        let count: u32 = env.storage().instance().get(&NONCE).unwrap_or(0);
-        count
+    pub fn get_current_nonce(env: Env) -> u32 {
+        let nonce: u32 = env.storage().instance().get(&NONCE).unwrap_or(0);
+        nonce
     }
 }
 

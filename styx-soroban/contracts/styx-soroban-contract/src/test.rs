@@ -58,7 +58,7 @@ impl<'a> ClaimableBalanceTest<'a> {
 #[test]
 fn test_deposit_and_increment_nonce() {
     let test = ClaimableBalanceTest::setup();
-    let initial_nonce = test.contract.get_current_value();
+    let initial_nonce = test.contract.get_current_nonce();
 
     let sender_address = Address::generate(&test.env);
     test.token_admin_client.mint(&sender_address, &1000);
@@ -78,7 +78,7 @@ fn test_deposit_and_increment_nonce() {
     assert_eq!(test.token.balance(&sender_address), 900);
 
     // Verify that the nonce has been updated correctly
-    let updated_nonce = test.contract.get_current_value();
+    let updated_nonce = test.contract.get_current_nonce();
     assert_eq!(
         updated_nonce,
         initial_nonce + 1,

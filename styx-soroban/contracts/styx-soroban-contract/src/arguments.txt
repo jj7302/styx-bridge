@@ -1,0 +1,9 @@
+Arguments:
+* valset
+
+
+
+What to store:
+* Hash of the valset (lastValsetCheckpoint)
+* batchNonce
+* 

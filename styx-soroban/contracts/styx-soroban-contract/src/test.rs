@@ -86,7 +86,7 @@ fn test_deposit_and_increment_nonce() {
     );
 
     
-    let example_claimable_balance = ClaimableBalance {
+    let example_claimable_balance = DepositEventData {
       token : test.token.address,
       amount: 100,
       sender: sender_address.clone(),
@@ -122,6 +122,22 @@ fn insufficient_funds_test() {
       &10000, // deposit amount
       &test.destination,
   );
+}
+
+#[test]
+fn initalize_test() {
+    let env = Env::default();
+    let client = ClaimableBalanceContractClient::new(&env, &env.register_contract(None, ClaimableBalanceContract));
+    let styx_id = BytesN::from_array(&env, &[1u8; 32]);
+    let validator1 = Address::generate(&env);
+    let validator2 = Address::generate(&env);
+    let validators = vec![&env, validator1, validator2];
+    let powers = vec![&env, 1500000000, 1500000000];
+    let token_admin = Address::generate(&env);
+    let (token, token_admin_client) = create_token_contract(&env, &token_admin);
+
+    client.initalize(&styx_id, &validators, &powers, &token.address);
+    std::println!("{:?}", &env.events().all());
 }
 // Additional tests could include:
 // - Testing edge cases, like depositing with a zero amount.

@@ -21,7 +21,7 @@ impl TryFromVal<Env, DataKey> for Val {
     }
 }
 
-const MIN_POWER: u64 = 2863311530; //TODO: find value for power threshold
+const MIN_POWER: u32 = 2863311530; //TODO: find value for power threshold
 
 #[derive(Clone, Debug)]
 #[contracttype]
@@ -137,8 +137,7 @@ impl ClaimableBalanceContract {
         styx_id: BytesN<32>,
         validators: Vec<Address>, //make sure we actually want these to be of address
         powers: Vec<u32>,
-        token: Address,
-        constant_power_threshold: u32,
+        token: Address
     ) {
         if (validators.is_empty()) {
             panic!("Validator set is empty");
@@ -150,11 +149,11 @@ impl ClaimableBalanceContract {
         let mut cumulative_power = 0;
         for power in powers.iter() {
             cumulative_power += power;
-            if cumulative_power > constant_power_threshold {
+            if cumulative_power > MIN_POWER {
                 break;
             }
         }
-        if cumulative_power <= constant_power_threshold {
+        if cumulative_power <= MIN_POWER {
             panic!("InsufficientPower");
         }
 

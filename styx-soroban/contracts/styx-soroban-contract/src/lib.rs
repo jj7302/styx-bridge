@@ -11,6 +11,7 @@ pub enum DataKey {
     EventNonce = 0,
     BatchNonce = 1,
     ValsetCheckpoint = 2,
+    Initialized = 3,
 }
 
 impl TryFromVal<Env, DataKey> for Val {
@@ -36,10 +37,10 @@ pub struct DepositEventData {
 #[derive(Clone, Debug)]
 #[contracttype]
 pub struct ValsetEventData {
-    pub newValsetNonce: BytesN<32>,
-    pub eventNonce: u32,
-    pub rewardAmount: u32,
-    pub rewardToken: Address,
+    pub new_valset_nonce: BytesN<32>,
+    pub event_nonce: u32,
+    pub reward_amount: u32,
+    pub reward_token: Address,
     pub validators: Vec<Address>,
     pub powers: Vec<u32>,
 }
@@ -139,10 +140,16 @@ impl ClaimableBalanceContract {
         powers: Vec<u32>,
         token: Address
     ) {
-        if (validators.is_empty()) {
+        if env.storage().instance().has(&DataKey::Initialized) {
+            panic!("Contract has already been initialized");
+        } else {
+            env.storage().instance().set(&DataKey::Initialized, &true);
+        }
+
+        if validators.is_empty() {
             panic!("Validator set is empty");
         }
-        if (validators.len() != powers.len()) {
+        if validators.len() != powers.len() {
             panic!("Validator and power set are not the same length");
         }
 
@@ -174,10 +181,10 @@ impl ClaimableBalanceContract {
             .set(&DataKey::ValsetCheckpoint, &new_checkpoint);
 
         let event_data = ValsetEventData {
-            newValsetNonce: new_checkpoint,
-            eventNonce: 0,
-            rewardAmount: 0,
-            rewardToken: token,
+            new_valset_nonce: new_checkpoint,
+            event_nonce: 0,
+            reward_amount: 0,
+            reward_token: token,
             validators: validators,
             powers: powers,
         };

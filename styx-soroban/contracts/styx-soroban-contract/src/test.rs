@@ -125,7 +125,7 @@ fn insufficient_funds_test() {
 }
 
 #[test]
-fn initalize_test() {
+fn basic_initalize_test() {
     let env = Env::default();
     let client = ClaimableBalanceContractClient::new(&env, &env.register_contract(None, ClaimableBalanceContract));
     let styx_id = BytesN::from_array(&env, &[1u8; 32]);
@@ -137,8 +137,25 @@ fn initalize_test() {
     let (token, token_admin_client) = create_token_contract(&env, &token_admin);
 
     client.initalize(&styx_id, &validators, &powers, &token.address);
-    std::println!("{:?}", &env.events().all());
 }
+
+#[test]
+#[should_panic(expected = "Contract has already been initialized")]
+fn double_init_test() {
+    let env = Env::default();
+    let client = ClaimableBalanceContractClient::new(&env, &env.register_contract(None, ClaimableBalanceContract));
+    let styx_id = BytesN::from_array(&env, &[1u8; 32]);
+    let validator1 = Address::generate(&env);
+    let validator2 = Address::generate(&env);
+    let validators = vec![&env, validator1, validator2];
+    let powers = vec![&env, 1500000000, 1500000000];
+    let token_admin = Address::generate(&env);
+    let (token, token_admin_client) = create_token_contract(&env, &token_admin);
+
+    client.initalize(&styx_id, &validators, &powers, &token.address);
+    client.initalize(&styx_id, &validators, &powers, &token.address);
+}
+
 // Additional tests could include:
 // - Testing edge cases, like depositing with a zero amount.
 // - Verifying event emission upon successful deposit.

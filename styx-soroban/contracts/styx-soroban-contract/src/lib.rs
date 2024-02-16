@@ -70,6 +70,10 @@ fn make_checkpoint(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN
     let checkpoint = e.crypto().keccak256(&payload);
     return checkpoint;
 }
+
+fn checkSignatures(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) {
+
+}
 #[contract]
 pub struct ClaimableBalanceContract;
 

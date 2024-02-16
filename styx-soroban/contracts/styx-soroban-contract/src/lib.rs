@@ -12,6 +12,7 @@ pub enum DataKey {
     BatchNonce = 1,
     ValsetCheckpoint = 2,
     Initialized = 3,
+    StyxId = 4,
 }
 
 impl TryFromVal<Env, DataKey> for Val {
@@ -41,14 +42,14 @@ pub struct ValsetEventData {
     pub event_nonce: u32,
     pub reward_amount: u32,
     pub reward_token: Address,
-    pub validators: Vec<Address>,
+    pub validators: Vec<BytesN<32>>,
     pub powers: Vec<u32>,
 }
 
 #[derive(Clone)]
 #[contracttype]
 pub struct ValsetArgs {
-    pub validators: Vec<Address>,
+    pub validators: Vec<BytesN<32>>, //public keys
     pub powers: Vec<u32>,
     pub valset_nonce: u32,
     pub reward_amount: u32,
@@ -57,9 +58,8 @@ pub struct ValsetArgs {
 
 #[contracttype]
 pub struct Signature {
-    pub v: BytesN<32>,
-    pub r: BytesN<32>,
-    pub s: BytesN<32>,
+    pub exists: bool,
+    pub sig: BytesN<64>,
 }
 
 fn make_checkpoint(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN<32> {
@@ -71,8 +71,28 @@ fn make_checkpoint(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN
     return checkpoint;
 }
 
-fn checkSignatures(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) {
+fn verifySignature(e: &Env, validator: &BytesN<32>, hash: &BytesN<32>, sig: &Signature) {
+    let verify_bytes = Bytes::from(hash);
+    e.crypto()
+        .ed25519_verify(validator, &verify_bytes, &sig.sig)
+}
 
+fn checkSignatures(e: &Env, valset: &ValsetArgs, sigs: &Vec<Signature>, hash: &BytesN<32>) {
+    let mut total_power = 0;
+    for i in 0..sigs.len() {
+        if sigs.get_unchecked(i).exists {
+            verifySignature(
+                &e,
+                &valset.validators.get_unchecked(i),
+                &hash,
+                &sigs.get_unchecked(i),
+            );
+            total_power += valset.powers.get_unchecked(i);
+        }
+    }
+    if total_power <= MIN_POWER {
+        panic!("Insufficient power from validators");
+    }
 }
 #[contract]
 pub struct ClaimableBalanceContract;
@@ -135,14 +155,73 @@ impl ClaimableBalanceContract {
         token_contract: Address,
         batch_timeout: u32,
     ) {
+        let mut nonce: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::BatchNonce)
+            .unwrap_or(0);
+
+        if batch_nonce <= nonce {
+            panic!(
+                "InvalidBatchNonce: newNonce={}, currentNonce={}",
+                batch_nonce, nonce
+            );
+        }
+
+        if batch_nonce > nonce + 1_000_000 {
+            panic!(
+                "InvalidBatchNonce: newNonce={}, currentNonce={}",
+                batch_nonce, nonce
+            );
+        }
+
+        if env.ledger().sequence() >= batch_timeout {
+            panic!("BatchTimedOut");
+        }
+
+        if current_valset.validators.len() != current_valset.powers.len()
+            || current_valset.validators.len() != sigs.len()
+        {
+            panic!("MalformedCurrentValidatorSet");
+        }
+
+        let mut nonce: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::ValsetCheckpoint)
+            .unwrap_or(0);
+
+        let mut valset_checkpoint: BytesN<32> = env
+            .storage()
+            .instance()
+            .get(&DataKey::ValsetCheckpoint)
+            .unwrap();
+
+        let mut styx_id: BytesN<32> = env.storage().instance().get(&DataKey::StyxId).unwrap(); //figure out how to unwrap/if this is ok
+
+        if make_checkpoint(&env, &current_valset, &styx_id) != valset_checkpoint {
+            panic!("IncorrectCheckpoint");
+        }
+
+        // Check that the transaction batch is well-formed
+        if amounts.len() != destinations.len() || amounts.len() != fees.len() {
+            panic!("MalformedBatch");
+        }
+
+        let mut payload = Bytes::new(&env);
+        payload.append(&styx_id.clone().to_xdr(&env));
+        payload.append(0x7472616e73616374696f6e426174636800000000000000000000000000000000);
+
+        env.crypto().keccak256();
+        checkSignatures(&e, &current_valset, &sigs, hash)
     }
 
     pub fn initalize(
         env: Env,
         styx_id: BytesN<32>,
-        validators: Vec<Address>, //make sure we actually want these to be of address
+        validators: Vec<BytesN<32>>, //make sure we actually want these to be of address
         powers: Vec<u32>,
-        token: Address
+        token: Address,
     ) {
         if env.storage().instance().has(&DataKey::Initialized) {
             panic!("Contract has already been initialized");
@@ -180,9 +259,12 @@ impl ClaimableBalanceContract {
 
         let nonce: u32 = 0;
         env.storage().instance().set(&DataKey::EventNonce, &nonce);
+
         env.storage()
             .instance()
             .set(&DataKey::ValsetCheckpoint, &new_checkpoint);
+
+        env.storage().instance().set(&DataKey::StyxId, &styx_id);
 
         let event_data = ValsetEventData {
             new_valset_nonce: new_checkpoint,

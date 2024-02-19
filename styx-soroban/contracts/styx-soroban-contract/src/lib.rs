@@ -71,17 +71,30 @@ fn make_checkpoint(e: &Env, valset: &ValsetArgs, styx_id: &BytesN<32>) -> BytesN
     return checkpoint;
 }
 
-fn verifySignature(e: &Env, validator: &BytesN<32>, hash: &BytesN<32>, sig: &Signature) {
+fn get_transaction_hash(e: &Env, styx_id: &BytesN<32>, amounts: &Vec<u32>, destinations: &Vec<Address>, fees: &Vec<u32>, batch_nonce: &u32, token_contract: &Address, batch_timeout: &u32) -> BytesN<32> {
+    let mut payload = Bytes::new(&e);
+    payload.append(&"transactionbatch".to_xdr(&e));
+    payload.append(&styx_id.clone().to_xdr(&e));
+    payload.append(&amounts.clone().to_xdr(&e));
+    payload.append(&destinations.clone().to_xdr(&e));
+    payload.append(&fees.clone().to_xdr(&e));
+    payload.append(&batch_nonce.clone().to_xdr(&e));
+    payload.append(&token_contract.clone().to_xdr(&e));
+    payload.append(&batch_timeout.clone().to_xdr(&e));
+    let transaction_hash = e.crypto().keccak256(&payload);
+}
+
+fn verify_signature(e: &Env, validator: &BytesN<32>, hash: &BytesN<32>, sig: &Signature) {
     let verify_bytes = Bytes::from(hash);
     e.crypto()
         .ed25519_verify(validator, &verify_bytes, &sig.sig)
 }
 
-fn checkSignatures(e: &Env, valset: &ValsetArgs, sigs: &Vec<Signature>, hash: &BytesN<32>) {
+fn check_signatures(e: &Env, valset: &ValsetArgs, sigs: &Vec<Signature>, hash: &BytesN<32>) {
     let mut total_power = 0;
     for i in 0..sigs.len() {
         if sigs.get_unchecked(i).exists {
-            verifySignature(
+            verify_signature(
                 &e,
                 &valset.validators.get_unchecked(i),
                 &hash,
@@ -154,7 +167,7 @@ impl ClaimableBalanceContract {
         batch_nonce: u32,
         token_contract: Address,
         batch_timeout: u32,
-    ) {
+    ) -> u32 {
         let mut nonce: u32 = env
             .storage()
             .instance()
@@ -208,12 +221,12 @@ impl ClaimableBalanceContract {
             panic!("MalformedBatch");
         }
 
-        let mut payload = Bytes::new(&env);
-        payload.append(&styx_id.clone().to_xdr(&env));
-        payload.append(0x7472616e73616374696f6e426174636800000000000000000000000000000000);
+        let t_hash = get_transaction_hash(&e, &styx_id, &amounts, &destinations, &fees, &batch_nonce, &token_contract, &batch_timeout);
+        check_signatures(&env, &current_valset, &sigs, &t_hash);
 
-        env.crypto().keccak256();
-        checkSignatures(&e, &current_valset, &sigs, hash)
+        env.storage().instance().set(&DataKey::BatchNonce, &batch_nonce);
+        batch_nonce
+        //TODO: send transactions to wallets and publish events
     }
 
     pub fn initalize(
